@@ -1,0 +1,16 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic-settings==2.9.1
+pillow==11.2.1
+rawpy==0.19.1
+numpy==2.2.6; python_version >= "3.10"
+numpy>=2.0,<2.1; python_version < "3.10"
+scikit-learn==1.7.0; python_version >= "3.10"
+scikit-learn>=1.5,<1.7; python_version < "3.10"
+transformers==4.52.4
+torch==2.7.1
+python-multipart==0.0.20
+# CLIP 模型权重下载（setup.sh --with-model / make model 使用）
+huggingface_hub>=0.30.0,<1.0
+# Python 3.9 下 pydantic 解析 tuple[int, int] / set[str] 等内置泛型注解所需
+eval_type_backport>=0.2.0; python_version < "3.10"

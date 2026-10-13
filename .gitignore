@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Node
+node_modules/
+frontend/dist/
+*.local
+
+# CLIP model weights (too large for GitHub, 3.4GB)
+backend/models/
+
+# 本地运行产物（setup.sh / make dev 生成）
+.data/
+.logs/
+.run/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.suo
+*.swp
+.DS_Store
+
+# Tool caches
+.playwright-mcp/
+.serena/
+.claude/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+*.env
+
+# 保留 .env 模板，只忽略真实配置
+!.env.example

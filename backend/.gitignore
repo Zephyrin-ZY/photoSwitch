@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Model weights
+models/
+
+# Environment
+.env
+*.env
+!.env.example
+
+# 本地运行数据（setup.sh 默认写入仓库根目录 .data，保留此处以防手动指定）
+.data/

@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "7001:7001"
+    volumes:
+      - photoswitch-data:/data
+      - /Volumes:/volumes:ro
+      - /Users:/Users:ro
+      - /Users/zhaoyun/models/clip-vit-base-patch32:/app/models/clip-vit-base-patch32:ro
+    environment:
+      - PHOTOSWITCH_DATA_DIR=/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "7003:80"
+    depends_on:
+      - backend
+
+volumes:
+  photoswitch-data:

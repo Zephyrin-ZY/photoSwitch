@@ -1,0 +1,42 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "7001:7001"
+    network_mode: host
+    volumes:
+      - ./backend/app:/app/app
+      - photoswitch-data:/data
+      - /Volumes:/volumes:ro
+      - /Users:/Users:ro
+      - /Users/zhaoyun/models/clip-vit-base-patch32:/app/models/clip-vit-base-patch32:ro
+    environment:
+      - PHOTOSWITCH_DATA_DIR=/data
+      - HF_ENDPOINT=https://hf-mirror.com
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 7001 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "7003:7003"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+    environment:
+      - VITE_API_BASE_URL=http://localhost:7001
+      - VITE_API_PROXY_TARGET=http://host.docker.internal:7001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - backend
+
+volumes:
+  photoswitch-data:
