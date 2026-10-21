@@ -33,36 +33,71 @@ export default function ClusterReview({ photos, projectId, onClose, onComplete, 
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [confirming, setConfirming] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [originalLoaded, setOriginalLoaded] = useState(false)
-  const [displaySrc, setDisplaySrc] = useState<'thumb' | 'original'>('thumb')
+  const [loadedHash, setLoadedHash] = useState<string | null>(null)
+  const [loadedAspect, setLoadedAspect] = useState<{ hash: string; aspect: number } | null>(null)
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
 
   const current = items[index]
+  const currentHash = current?.hash
+  const metaAspect = current && current.width && current.height ? current.width / current.height : null
+  const imgAspect = loadedAspect?.hash === currentHash ? loadedAspect.aspect : metaAspect
+  const displaySrc = current && loadedHash === current.hash ? 'original' : 'thumb'
 
   const goPrev = useCallback(() => setIndex(i => Math.max(0, i - 1)), [])
   const goNext = useCallback(() => setIndex(i => Math.min(items.length - 1, i + 1)), [items.length])
 
-  const { imgStyle, handlers } = usePhotoGestures({
+  // 原图模式下的 contain 尺寸，用于计算平移边界
+  const containSize = useMemo(() => {
+    if (!imgAspect || stageSize.width <= 0 || stageSize.height <= 0) return null
+    let width = stageSize.width
+    let height = width / imgAspect
+    if (height > stageSize.height) {
+      height = stageSize.height
+      width = height * imgAspect
+    }
+    return { width, height }
+  }, [imgAspect, stageSize])
+
+  const { imgStyle, handlers, stageRef } = usePhotoGestures({
     onPrev: goPrev,
     onNext: goNext,
     resetKey: current?.hash ?? index,
+    contentSize: containSize,
+    viewportSize: stageSize,
   })
+
+  useEffect(() => {
+    const el = stageRef.current
+    if (!el) return
+    const update = () => setStageSize({ width: el.clientWidth, height: el.clientHeight })
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [stageRef])
+
+  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth, naturalHeight } = e.currentTarget
+    if (!currentHash || naturalWidth <= 0 || naturalHeight <= 0) return
+    const aspect = naturalWidth / naturalHeight
+    setLoadedAspect(prev => (
+      prev?.hash === currentHash && Math.abs(prev.aspect - aspect) < 0.001
+        ? prev
+        : { hash: currentHash, aspect }
+    ))
+  }, [currentHash])
 
   // 渐进加载原图
   useEffect(() => {
-    if (!current) return
-    setOriginalLoaded(false)
-    setDisplaySrc('thumb')
+    if (!currentHash) return
+    let cancelled = false
     const img = new Image()
-    img.src = getOriginalUrl(current.hash, projectId)
-    img.onload = () => setOriginalLoaded(true)
-  }, [current?.hash, projectId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (originalLoaded) {
-      const t = setTimeout(() => setDisplaySrc('original'), 50)
-      return () => clearTimeout(t)
+    img.src = getOriginalUrl(currentHash, projectId)
+    img.onload = () => {
+      if (!cancelled) setLoadedHash(currentHash)
     }
-  }, [originalLoaded])
+    return () => { cancelled = true }
+  }, [currentHash, projectId])
 
   // 空组直接关闭
   useEffect(() => {
@@ -141,7 +176,7 @@ export default function ClusterReview({ photos, projectId, onClose, onComplete, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/95 flex flex-col"
+      className="fixed inset-0 z-50 bg-[#0a0a0f] flex flex-col"
     >
       {/* 顶部栏 */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
@@ -173,16 +208,18 @@ export default function ClusterReview({ photos, projectId, onClose, onComplete, 
 
       {/* 图片区 */}
       <div
-        className="flex-1 overflow-hidden flex items-center justify-center relative"
+        ref={stageRef}
+        className="flex-1 min-h-0 overflow-hidden flex items-center justify-center relative select-none"
         style={{ touchAction: 'none' }}
         {...handlers}
       >
         <img
           src={displaySrc === 'original' ? getOriginalUrl(current.hash, projectId) : getThumbnailUrl(current.hash, 'medium')}
           alt=""
-          className={`max-h-full max-w-full object-contain select-none transition-opacity ${isEliminated ? 'opacity-40' : ''}`}
+          className={`h-full w-full object-contain select-none transition-opacity ${isEliminated ? 'opacity-40' : ''}`}
           style={imgStyle}
           draggable={false}
+          onLoad={handleImageLoad}
         />
         {isEliminated && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-xs">

@@ -9,8 +9,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages --index-url ${PIP_INDEX_URL} -r requirements.txt
 
 COPY app/ ./app/
 
