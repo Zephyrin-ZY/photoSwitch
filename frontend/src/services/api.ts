@@ -10,6 +10,18 @@ export async function listProjects(): Promise<Project[]> {
   return data
 }
 
+export interface ServerInfo {
+  lan_ip: string | null
+  hostname: string
+  candidates: string[]
+}
+
+/** 获取本机局域网访问信息（后端探测宿主机 IP）。 */
+export async function getServerInfo(): Promise<ServerInfo> {
+  const { data } = await api.get('/server-info')
+  return data
+}
+
 export async function createProject(name: string, sourceFolders: string[], similarityThreshold: number = 0.85): Promise<Project> {
   const { data } = await api.post('/projects', { name, source_folders: sourceFolders, similarity_threshold: similarityThreshold })
   return data

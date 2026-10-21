@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { getThumbnailUrl, getOriginalUrl } from '../services/api'
+import { useShortcuts } from '../stores/ShortcutStore'
 import type { Photo } from '../types'
 import {
   createActionErrorFeedback,
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function Tournament({ photos, projectId, onClose, onComplete, onStatusChange, onToggleFavorite }: Props) {
+  const { match, label } = useShortcuts()
   const [round, setRound] = useState<Photo[]>([...photos])
   const [matchIdx, setMatchIdx] = useState(0)
   const [winner, setWinner] = useState<Photo | null>(null)
@@ -203,37 +205,37 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
     if (previewMode) return // 预览模式有自己的 handler
 
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') { e.preventDefault(); setSelectedIdx(0) }
-      if (e.key === 'ArrowRight') { e.preventDefault(); setSelectedIdx(1) }
-      if (e.key === 'Enter') { e.preventDefault(); handlePick(selectedIdx) }
-      if (e.key === ' ') { e.preventDefault(); enterPreview() }
-      if (e.key === 's' || e.key === 'S') { e.preventDefault(); handleFavorite(selectedIdx) }
-      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); handleSelectedKeepAndContinue() }
-      if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleUndo() }
-      if (e.key === 'Escape') { e.preventDefault(); onClose() }
+      if (match(e, 'pk.selectLeft')) { e.preventDefault(); setSelectedIdx(0) }
+      if (match(e, 'pk.selectRight')) { e.preventDefault(); setSelectedIdx(1) }
+      if (match(e, 'pk.pick')) { e.preventDefault(); handlePick(selectedIdx) }
+      if (match(e, 'pk.preview')) { e.preventDefault(); enterPreview() }
+      if (match(e, 'pk.favorite')) { e.preventDefault(); handleFavorite(selectedIdx) }
+      if (match(e, 'pk.keepSelected')) { e.preventDefault(); handleSelectedKeepAndContinue() }
+      if (match(e, 'pk.undo')) { e.preventDefault(); handleUndo() }
+      if (match(e, 'pk.close')) { e.preventDefault(); onClose() }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [previewMode, selectedIdx, handlePick, enterPreview, handleFavorite, handleSelectedKeepAndContinue, handleUndo, onClose])
+  }, [previewMode, selectedIdx, handlePick, enterPreview, handleFavorite, handleSelectedKeepAndContinue, handleUndo, onClose, match])
 
   // 预览模式键盘
   useEffect(() => {
     if (!previewMode) return
 
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') { e.preventDefault(); setPreviewIdx(0) }
-      if (e.key === 'ArrowRight') { e.preventDefault(); setPreviewIdx(1) }
-      if (e.key === 'Enter') { e.preventDefault(); handlePick(previewIdx) }
-      if (e.key === 'k' || e.key === 'K') { e.preventDefault(); handleKeepAndContinue() }
-      if (e.key === 's' || e.key === 'S') { e.preventDefault(); handleFavorite(previewIdx) }
-      if (e.key === 'Escape') { e.preventDefault(); setPreviewMode(false) }
-      if (e.key === '+' || e.key === '=') { e.preventDefault(); setPreviewScale(s => Math.min(5, s + 0.3)) }
-      if (e.key === '-') { e.preventDefault(); setPreviewScale(s => Math.max(0.5, s - 0.3)) }
-      if (e.key === '0') { e.preventDefault(); setPreviewScale(1); previewOffsetRef.current = { x: 0, y: 0 } }
+      if (match(e, 'preview.selectLeft')) { e.preventDefault(); setPreviewIdx(0) }
+      if (match(e, 'preview.selectRight')) { e.preventDefault(); setPreviewIdx(1) }
+      if (match(e, 'preview.pick')) { e.preventDefault(); handlePick(previewIdx) }
+      if (match(e, 'preview.keepContinue')) { e.preventDefault(); handleKeepAndContinue() }
+      if (match(e, 'preview.favorite')) { e.preventDefault(); handleFavorite(previewIdx) }
+      if (match(e, 'preview.back')) { e.preventDefault(); setPreviewMode(false) }
+      if (match(e, 'preview.zoomIn')) { e.preventDefault(); setPreviewScale(s => Math.min(5, s + 0.3)) }
+      if (match(e, 'preview.zoomOut')) { e.preventDefault(); setPreviewScale(s => Math.max(0.5, s - 0.3)) }
+      if (match(e, 'preview.resetZoom')) { e.preventDefault(); setPreviewScale(1); previewOffsetRef.current = { x: 0, y: 0 } }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [previewMode, previewIdx, handlePick, handleKeepAndContinue, handleFavorite])
+  }, [previewMode, previewIdx, handlePick, handleKeepAndContinue, handleFavorite, match])
 
   const handlePreviewWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault()
@@ -290,16 +292,16 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
           </div>
           <div className="flex gap-2">
             <button onClick={() => handleKeepAndContinue()} className="px-3 py-1.5 text-xs text-green-400/60 hover:text-green-400 border border-green-500/20 rounded-md cursor-pointer hover:bg-green-500/10">
-              ✓ 保留继续 (K)
+              ✓ 保留继续 ({label('preview.keepContinue')})
             </button>
             <button onClick={() => handleFavorite(previewIdx)} className="px-3 py-1.5 text-xs text-yellow-400/60 hover:text-yellow-400 border border-yellow-500/20 rounded-md cursor-pointer hover:bg-yellow-500/10">
-              ★ 收藏 (S)
+              ★ 收藏 ({label('preview.favorite')})
             </button>
             <button onClick={() => setPreviewScale(1)} className="px-3 py-1.5 text-xs text-white/30 border border-white/10 rounded-md cursor-pointer hover:text-white/60">
               重置缩放
             </button>
             <button onClick={() => setPreviewMode(false)} className="px-3 py-1.5 text-xs text-white/30 border border-white/10 rounded-md cursor-pointer hover:text-white/60">
-              返回PK (Esc)
+              返回PK ({label('preview.back')})
             </button>
           </div>
         </div>
@@ -335,7 +337,7 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
             onClick={() => handlePick(previewIdx)}
             className="px-6 py-2 text-sm text-green-400 border border-green-500/30 rounded-md cursor-pointer hover:bg-green-500/10 transition-colors"
           >
-            Enter 胜出
+            {label('preview.pick')} 胜出
           </button>
           <button
             onClick={() => setPreviewIdx(1)}
@@ -348,7 +350,7 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
         </div>
 
         <div className="text-center text-white/15 text-xs pb-2">
-          ← → 切换 · Enter 胜出 · K 保留继续 · S 收藏 · 滚轮缩放 · Esc 返回
+          {label('preview.selectLeft')} / {label('preview.selectRight')} 切换 · {label('preview.pick')} 胜出 · {label('preview.keepContinue')} 保留继续 · {label('preview.favorite')} 收藏 · 滚轮缩放 · {label('preview.back')} 返回
         </div>
       </motion.div>
     )
@@ -380,7 +382,7 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
             撤销
           </button>
           <button onClick={handleSelectedKeepAndContinue} className="px-3 py-1.5 text-xs text-white/30 hover:text-white/60 border border-white/10 rounded-md cursor-pointer">
-            选中直接保留 (D)
+            选中直接保留 ({label('pk.keepSelected')})
           </button>
           <button onClick={onClose} className="px-3 py-1.5 text-xs text-white/30 hover:text-white/60 border border-white/10 rounded-md cursor-pointer">
             关闭
@@ -405,7 +407,7 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
       </div>
 
       <div className="text-center text-white/20 text-xs pb-3">
-        ← → 选择 · Enter 胜出 · Space 预览 · S 收藏 · D 选中直接保留 · Esc 关闭
+        {label('pk.selectLeft')} / {label('pk.selectRight')} 选择 · {label('pk.pick')} 胜出 · {label('pk.preview')} 预览 · {label('pk.favorite')} 收藏 · {label('pk.keepSelected')} 选中直接保留 · {label('pk.close')} 关闭
       </div>
     </motion.div>
   )

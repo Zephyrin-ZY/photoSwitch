@@ -1,0 +1,25 @@
+{
+  "name": "PhotoSwitch - AI 旅行照片精选",
+  "short_name": "PhotoSwitch",
+  "description": "AI 旅行照片筛选与精选工具，支持相似组淘汰浏览与单图快速筛选。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d0d1a",
+  "theme_color": "#0d0d1a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -5,9 +5,11 @@ import { getAnalysisProgress, getThumbnailUrl, regenerateThumbnails } from '../s
 import type { Photo } from '../types'
 import { motion, AnimatePresence } from 'framer-motion'
 import Tournament from '../components/Tournament'
+import ClusterReview from '../components/ClusterReview'
 import PhotoViewer from '../components/PhotoViewer'
 import ExportPanel from '../components/ExportPanel'
 import { useToast } from '../components/Toast'
+import { useIsTouch } from '../utils/touch'
 import {
   type FilterType,
   getClusterList,
@@ -24,9 +26,11 @@ export default function FilterPage() {
   const store = usePhotoStore()
   const { state, init, updateStatus, toggleFav, getPhotosByFilter, getClustersByFilter, getClusterPhotos, findNextUnfilteredCluster } = store
   const { showError, showInfo, showSuccess } = useToast()
+  const isTouch = useIsTouch()
 
   const [filter, setFilter] = useState<FilterType>('pending')
-  const [mode, setMode] = useState<'grid' | 'tournament' | 'viewer'>('grid')
+  const [pendingFlat, setPendingFlat] = useState(false)
+  const [mode, setMode] = useState<'grid' | 'tournament' | 'review' | 'viewer'>('grid')
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
   const [viewerPhoto, setViewerPhoto] = useState<Photo | null>(null)
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -46,7 +50,11 @@ export default function FilterPage() {
   }, [id, state.loaded, state.projectId, init])
 
   // 从 store 实时计算派生数据
-  const isFlatMode = filter === 'keep' || filter === 'favorite' || filter === 'all'
+  const isFlatMode =
+    filter === 'keep' ||
+    filter === 'favorite' ||
+    filter === 'all' ||
+    (filter === 'pending' && pendingFlat)
   const clusters = useMemo(() => getClustersByFilter(filter), [getClustersByFilter, filter])
   const filteredPhotos = useMemo(() => getPhotosByFilter(filter), [getPhotosByFilter, filter])
   const clusterList = useMemo(() => getClusterList(clusters), [clusters])
@@ -146,6 +154,12 @@ export default function FilterPage() {
     setMode('viewer')
   }
 
+  // 触摸端进入「组内淘汰浏览」，桌面端进入「两两 PK」
+  const openCluster = (clusterId: string) => {
+    setSelectedCluster(clusterId)
+    setMode(isTouch ? 'review' : 'tournament')
+  }
+
   if (!state.loaded) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-56px)]">
@@ -170,6 +184,24 @@ export default function FilterPage() {
             </button>
           ))}
         </div>
+        {filter === 'pending' && (
+          <>
+            <div className="h-4 w-px bg-white/10" />
+            <div className="flex gap-1">
+              {([false, true] as const).map(flat => (
+                <button
+                  key={String(flat)}
+                  onClick={() => setPendingFlat(flat)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                    pendingFlat === flat ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'text-white/40 hover:text-white/60 border border-transparent'
+                  }`}
+                >
+                  {flat ? '平铺' : '分组'}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         <div className="h-4 w-px bg-white/10" />
         <div className="flex gap-1 flex-wrap">
           {!thumbRegen.running && !thumbRegen.done && (
@@ -205,12 +237,9 @@ export default function FilterPage() {
                 {filterSummary}
               </div>
             </div>
-            {filter === 'pending' && clusterList.length > 0 && (
+            {filter === 'pending' && !pendingFlat && clusterList.length > 0 && (
               <button
-                onClick={() => {
-                  setSelectedCluster(clusterList[0][0])
-                  setMode('tournament')
-                }}
+                onClick={() => openCluster(clusterList[0][0])}
                 className="px-3 py-2 rounded-lg border border-cyan-500/20 text-cyan-400 text-xs hover:bg-cyan-500/10 transition-colors cursor-pointer"
               >
                 从下一组相似照片开始
@@ -230,7 +259,7 @@ export default function FilterPage() {
         {isFlatMode ? (
           <div>
             <h3 className="text-sm font-medium text-white/50 mb-4">
-              {{ all: '全部照片', keep: '保留', favorite: '★ 收藏' }[filter]} ({allPhotosFlat.length} 张)
+              {{ all: '全部照片', pending: '待筛选', keep: '保留', favorite: '★ 收藏' }[filter]} ({allPhotosFlat.length} 张)
             </h3>
             <div className="columns-3 md:columns-5 lg:columns-6 xl:columns-8 gap-2 space-y-2">
               {allPhotosFlat.map((p, i) => (
@@ -275,7 +304,7 @@ export default function FilterPage() {
                       key={clusterId}
                       whileHover={{ scale: 1.02 }}
                       className="rounded-xl border border-white/10 bg-white/5 overflow-hidden cursor-pointer"
-                      onClick={() => { setSelectedCluster(clusterId); setMode('tournament') }}
+                      onClick={() => openCluster(clusterId)}
                     >
                       <div className="grid grid-cols-2 gap-0.5 aspect-square">
                         {clusterPhotos.slice(0, 4).map((p) => (
@@ -337,6 +366,31 @@ export default function FilterPage() {
       <AnimatePresence>
         {mode === 'tournament' && selectedCluster && (
           <Tournament
+            key={selectedCluster}
+            photos={getClusterPhotos(selectedCluster)}
+            projectId={id!}
+            onClose={() => {
+              setMode('grid')
+              setSelectedCluster(null)
+            }}
+            onComplete={() => {
+              const nextCluster = findNextUnfilteredCluster(selectedCluster)
+              if (nextCluster) {
+                setSelectedCluster(nextCluster)
+              } else {
+                setMode('grid')
+                setSelectedCluster(null)
+              }
+            }}
+            onStatusChange={handleStatusChange}
+            onToggleFavorite={handleToggleFavorite}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {mode === 'review' && selectedCluster && (
+          <ClusterReview
             key={selectedCluster}
             photos={getClusterPhotos(selectedCluster)}
             projectId={id!}
