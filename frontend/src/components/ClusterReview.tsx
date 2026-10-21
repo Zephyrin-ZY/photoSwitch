@@ -214,7 +214,7 @@ export default function ClusterReview({ photos, projectId, onClose, onComplete, 
         {...handlers}
       >
         <img
-          src={displaySrc === 'original' ? getOriginalUrl(current.hash, projectId) : getThumbnailUrl(current.hash, 'medium')}
+          src={displaySrc === 'original' ? getOriginalUrl(current.hash, projectId) : getThumbnailUrl(current.hash, projectId, 'medium')}
           alt=""
           className={`h-full w-full object-contain select-none transition-opacity ${isEliminated ? 'opacity-40' : ''}`}
           style={imgStyle}

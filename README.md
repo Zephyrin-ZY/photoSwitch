@@ -34,7 +34,7 @@
 | --- | --- |
 | 文件夹索引 | 指定一个或多个本地文件夹，扫描支持的图片格式，按文件内容 MD5 建立身份索引 |
 | 相似照片分组 | CLIP（`openai/clip-vit-base-patch32`）提取 512 维特征 → 余弦相似度 → 层次聚类，阈值可调 |
-| 分层缩略图 | 列表缩略图 600px、对比缩略图 1200px、原图按需加载；按内容哈希缓存，跨项目复用 |
+| 分层缩略图 | 列表缩略图 600px、对比缩略图 1200px、原图按需加载；缩略图随项目存储，删除项目时一并清理 |
 | RAW 支持 | CR2 / NEF / ARW / RAF / DNG / ORF / RW2，用 rawpy 提取内嵌预览图 |
 | 两两对决 | 组内照片逐张 PK，胜者留下、败者淘汰，比逐张打分快得多 |
 | 状态管理 | 待筛选 / 保留 / 淘汰 / 收藏，支持撤销，筛选进度落盘可中断续做 |
@@ -201,8 +201,7 @@ vocab.json   merges.txt  special_tokens_map.json  pytorch_model.bin
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `PHOTOSWITCH_DATA_DIR` | `/data` | 项目索引、聚类向量、进度文件存放目录（本地务必改成可写路径） |
-| `PHOTOSWITCH_THUMBNAIL_DIR` | `/data/thumbnails` | 缩略图缓存目录，按文件内容哈希命名 |
+| `PHOTOSWITCH_DATA_DIR` | `/data` | 项目索引、缩略图、聚类向量、进度文件存放目录（本地务必改成可写路径） |
 | `PHOTOSWITCH_CLIP_MODEL` | `/app/models/clip-vit-base-patch32` | 本地模型目录，或 Hugging Face 仓库 id |
 | `PHOTOSWITCH_SIMILARITY_THRESHOLD` | `0.85` | 分组阈值，越大分组越严格；创建项目时可单独覆盖 |
 | `PHOTOSWITCH_THUMBNAIL_SIZE` | `[600,600]` | 列表缩略图尺寸，需写成 JSON 数组 |
@@ -381,7 +380,7 @@ Pillow 默认不解码 HEIC，可选安装：`backend/.venv/bin/pip install pill
 
 **分析卡在缩略图阶段**
 
-大尺寸 RAW 首次生成缩略图较慢，进度条会持续推进；缩略图按内容哈希缓存在 `.data/thumbnails`，同一批照片第二次分析会直接复用。
+大尺寸 RAW 首次生成缩略图较慢，进度条会持续推进；缩略图存放在 `.data/projects/<项目ID>/thumbnails`，同一项目内重复分析会直接复用，删除项目时会随项目目录一起删除。
 
 **Python 3.9 能装吗**
 

@@ -184,7 +184,7 @@ fi
 # ---------- 5. 配置文件 + CLIP 模型 ----------
 step "5/5 生成本地配置与 CLIP 模型"
 
-mkdir -p "$DATA_DIR/thumbnails"
+mkdir -p "$DATA_DIR"
 ok "数据目录 ${DATA_DIR}"
 
 ENV_FILE="$BACKEND_DIR/.env"
@@ -196,7 +196,6 @@ else
 # 全部配置项说明见 backend/.env.example
 
 PHOTOSWITCH_DATA_DIR=$DATA_DIR
-PHOTOSWITCH_THUMBNAIL_DIR=$DATA_DIR/thumbnails
 PHOTOSWITCH_CLIP_MODEL=$MODEL_DIR
 PHOTOSWITCH_SIMILARITY_THRESHOLD=0.85
 

@@ -74,7 +74,7 @@ def api_start_analysis(project_id: str, req: AnalysisRequest):
 
             def gen_one_thumb(f):
                 nonlocal thumb_completed
-                generate_thumbnail(f.original_path, f.hash, f.format)
+                generate_thumbnail(project_id, f.original_path, f.hash, f.format)
                 with thumb_lock:
                     thumb_completed += 1
                     _progress[project_id]["thumbnail"]["current"] = thumb_completed
@@ -193,7 +193,7 @@ def api_regenerate_thumbnails(project_id: str):
 
             def gen_one(f):
                 nonlocal completed
-                generate_thumbnail(f.original_path, f.hash, f.format, force=True)
+                generate_thumbnail(project_id, f.original_path, f.hash, f.format, force=True)
                 with lock:
                     completed += 1
                     _progress[project_id]["thumbnail"]["current"] = completed

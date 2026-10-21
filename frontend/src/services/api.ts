@@ -124,8 +124,8 @@ export async function exportPhotos(
   })
 }
 
-export function getThumbnailUrl(hash: string, size: 'thumb' | 'medium' = 'thumb'): string {
-  return `/api/photos/${hash}/thumbnail?size=${size}`
+export function getThumbnailUrl(hash: string, projectId: string, size: 'thumb' | 'medium' = 'thumb'): string {
+  return `/api/photos/${hash}/thumbnail?project_id=${projectId}&size=${size}`
 }
 
 export function getOriginalUrl(hash: string, projectId: string): string {

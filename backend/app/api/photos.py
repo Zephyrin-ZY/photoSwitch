@@ -17,8 +17,8 @@ def _find_file(project_id: str, file_hash: str):
 
 
 @router.get("/{file_hash}/thumbnail")
-def api_get_thumbnail(file_hash: str, size: str = "thumb"):
-    thumb_path = get_thumbnail_path(file_hash, size)
+def api_get_thumbnail(file_hash: str, project_id: str, size: str = "thumb"):
+    thumb_path = get_thumbnail_path(project_id, file_hash, size)
     if not thumb_path.exists():
         raise HTTPException(404, "Thumbnail not found")
     return FileResponse(str(thumb_path), media_type="image/jpeg")

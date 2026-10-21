@@ -56,7 +56,7 @@
 | 对比缩略图 | 1200px | 两两对决、分组对比 |
 | 原图 | 原始尺寸 | 查看器按需加载 |
 
-- 缩略图按内容哈希命名，缓存在 `~/.photoswitch/thumbnails/` 下
+- 缩略图按内容哈希命名，存放在项目目录的 `thumbnails/` 下，删除项目时一并清理
 - RAW 文件用 rawpy 提取内嵌预览图
 - 大图用 Pillow 缩放生成
 - 再次打开项目时已有缩略图直接复用
@@ -232,10 +232,10 @@ photoSwitch/
 │       ├── files.json       # 文件索引
 │       ├── vectors.npy      # CLIP 特征向量
 │       ├── clusters.json    # 聚类分组结果
-│       └── analysis.json    # 场景分析结果
-└── thumbnails/
-    ├── {hash}_thumb.jpg     # 列表缩略图 (400-600px)
-    └── {hash}_medium.jpg    # 对比缩略图 (1200px)
+│       ├── analysis.json    # 场景分析结果
+│       └── thumbnails/
+│           ├── {hash}_thumb.jpg     # 列表缩略图 (400-600px)
+│           └── {hash}_medium.jpg    # 对比缩略图 (1200px)
 ```
 
 **project.json 结构：**
@@ -282,7 +282,7 @@ photoSwitch/
 | PUT | /api/projects/{id}/photos/{hash}/status | 更新照片状态 |
 | GET | /api/projects/{id}/clusters | 获取相似照片分组 |
 | GET | /api/projects/{id}/clusters/{cluster_id} | 获取分组详情 |
-| GET | /api/photos/{hash}/thumbnail | 获取缩略图 |
+| GET | /api/photos/{hash}/thumbnail?project_id={id} | 获取缩略图 |
 | GET | /api/photos/{hash}/original | 获取原图 |
 | POST | /api/projects/{id}/export | 导出照片 |
 | GET | /api/projects/{id}/export/progress | 导出进度 (SSE) |

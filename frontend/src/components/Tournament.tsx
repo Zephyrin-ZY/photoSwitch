@@ -248,6 +248,7 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
     return (
       <FinishedScreen
         winner={winner}
+        projectId={projectId}
         message="最终胜出"
         onAction={onComplete}
         actionText="按任意键继续"
@@ -259,6 +260,7 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
     return (
       <FinishedScreen
         winner={null}
+        projectId={projectId}
         message="对决结束"
         onAction={onClose}
         actionText="按任意键继续"
@@ -393,6 +395,7 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
       <div className="flex-1 flex items-center justify-center gap-6 px-6 pb-6">
         <PhotoCard
           photo={currentA}
+          projectId={projectId}
           selected={selectedIdx === 0}
           onSelect={() => setSelectedIdx(0)}
           onFavorite={() => handleFavorite(0)}
@@ -400,6 +403,7 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
         <div className="text-white/20 text-2xl font-bold">VS</div>
         <PhotoCard
           photo={currentB}
+          projectId={projectId}
           selected={selectedIdx === 1}
           onSelect={() => setSelectedIdx(1)}
           onFavorite={() => handleFavorite(1)}
@@ -413,8 +417,9 @@ export default function Tournament({ photos, projectId, onClose, onComplete, onS
   )
 }
 
-function PhotoCard({ photo, selected, onSelect, onFavorite }: {
+function PhotoCard({ photo, projectId, selected, onSelect, onFavorite }: {
   photo: Photo
+  projectId: string
   selected: boolean
   onSelect: () => void
   onFavorite: () => void
@@ -427,7 +432,7 @@ function PhotoCard({ photo, selected, onSelect, onFavorite }: {
     >
       <div className={`rounded-xl overflow-hidden border-2 transition-colors ${selected ? 'border-cyan-400/40' : 'border-transparent'}`}>
         <img
-          src={getThumbnailUrl(photo.hash, 'medium')}
+          src={getThumbnailUrl(photo.hash, projectId, 'medium')}
           alt=""
           className="max-h-[65vh] object-contain"
         />
@@ -474,8 +479,9 @@ function FeedbackBanner({ feedback }: { feedback: TournamentFeedback }) {
   )
 }
 
-function FinishedScreen({ winner, message, onAction, actionText }: {
+function FinishedScreen({ winner, projectId, message, onAction, actionText }: {
   winner: Photo | null
+  projectId: string
   message: string
   onAction: () => void
   actionText: string
@@ -502,7 +508,7 @@ function FinishedScreen({ winner, message, onAction, actionText }: {
         {winner && (
           <>
             <img
-              src={getThumbnailUrl(winner.hash, 'medium')}
+              src={getThumbnailUrl(winner.hash, projectId, 'medium')}
               alt=""
               className="max-h-[60vh] rounded-xl mx-auto"
             />

@@ -202,7 +202,7 @@ export default function PhotoViewer({ photo, projectId, photos, currentIndex, on
     }
   }, [photos, currentIndex, onNavigate, onClose])
 
-  const previewSrc = getThumbnailUrl(photo.hash, 'medium')
+  const previewSrc = getThumbnailUrl(photo.hash, projectId, 'medium')
   const src = displaySrc === 'original'
     ? getOriginalUrl(photo.hash, projectId)
     : previewSrc

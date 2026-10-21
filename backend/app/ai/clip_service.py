@@ -46,7 +46,7 @@ def extract_features_and_cluster(
     for i, f in enumerate(files):
         try:
             print(f"[CLIP] Processing {f.filename}...", file=sys.stderr)
-            thumb_path = get_thumbnail_path(f.hash, "thumb")
+            thumb_path = get_thumbnail_path(project_id, f.hash, "thumb")
             img_path = str(thumb_path) if thumb_path.exists() else f.original_path
             img = Image.open(img_path).convert("RGB")
             img.thumbnail((224, 224))

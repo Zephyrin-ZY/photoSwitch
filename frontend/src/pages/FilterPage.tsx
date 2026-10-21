@@ -274,7 +274,7 @@ export default function FilterPage() {
                   }}
                 >
                   <img
-                    src={getThumbnailUrl(p.hash)}
+                    src={getThumbnailUrl(p.hash, id ?? '')}
                     alt=""
                     className="w-full h-auto block"
                     loading="lazy"
@@ -310,7 +310,7 @@ export default function FilterPage() {
                         {clusterPhotos.slice(0, 4).map((p) => (
                           <div key={p.hash} className="bg-white/5 overflow-hidden">
                             <img
-                              src={getThumbnailUrl(p.hash)}
+                              src={getThumbnailUrl(p.hash, id ?? '')}
                               alt=""
                               className="w-full h-full object-cover"
                               loading="lazy"
@@ -340,7 +340,7 @@ export default function FilterPage() {
                     onClick={() => openViewer(p, i)}
                   >
                     <img
-                      src={getThumbnailUrl(p.hash)}
+                      src={getThumbnailUrl(p.hash, id ?? '')}
                       alt=""
                       className="w-full h-auto block"
                       loading="lazy"

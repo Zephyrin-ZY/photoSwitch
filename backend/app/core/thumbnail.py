@@ -7,13 +7,17 @@ from ..config import settings
 RAW_FORMATS = {"cr2", "nef", "arw", "raf", "dng", "orf", "rw2"}
 
 
-def get_thumbnail_path(file_hash: str, size: str = "thumb") -> Path:
+def get_project_thumbnail_dir(project_id: str) -> Path:
+    return Path(settings.data_dir) / "projects" / project_id / "thumbnails"
+
+
+def get_thumbnail_path(project_id: str, file_hash: str, size: str = "thumb") -> Path:
     suffix = "medium" if size == "medium" else "thumb"
-    return Path(settings.thumbnail_dir) / f"{file_hash}_{suffix}.jpg"
+    return get_project_thumbnail_dir(project_id) / f"{file_hash}_{suffix}.jpg"
 
 
-def generate_thumbnail(file_path: str, file_hash: str, fmt: str, force: bool = False) -> dict[str, str]:
-    Path(settings.thumbnail_dir).mkdir(parents=True, exist_ok=True)
+def generate_thumbnail(project_id: str, file_path: str, file_hash: str, fmt: str, force: bool = False) -> dict[str, str]:
+    Path(get_project_thumbnail_dir(project_id)).mkdir(parents=True, exist_ok=True)
 
     img = load_oriented_image(file_path, fmt)
     if img is None:
@@ -24,7 +28,7 @@ def generate_thumbnail(file_path: str, file_hash: str, fmt: str, force: bool = F
         ("thumb", settings.thumbnail_size),
         ("medium", settings.medium_thumbnail_size),
     ]:
-        out_path = get_thumbnail_path(file_hash, size_name)
+        out_path = get_thumbnail_path(project_id, file_hash, size_name)
         if out_path.exists() and not force:
             results[size_name] = str(out_path)
             continue

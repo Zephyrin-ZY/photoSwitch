@@ -12,7 +12,6 @@ ENV_FILE = BACKEND_DIR / ".env"
 class Settings(BaseSettings):
     app_name: str = "PhotoSwitch"
     data_dir: str = "/data"  # Docker volume mount for project data
-    thumbnail_dir: str = "/data/thumbnails"
     clip_model: str = "/app/models/clip-vit-base-patch32"
     similarity_threshold: float = 0.85
     thumbnail_size: tuple[int, int] = (600, 600)
