@@ -14,6 +14,7 @@ services:
       - ./backend/models/clip-vit-base-patch32:/app/models/clip-vit-base-patch32:ro
     environment:
       - PHOTOSWITCH_DATA_DIR=/data
+      - PHOTOSWITCH_LAN_IP=${PHOTOSWITCH_LAN_IP:-}
       - HF_ENDPOINT=https://hf-mirror.com
     extra_hosts:
       - "host.docker.internal:host-gateway"

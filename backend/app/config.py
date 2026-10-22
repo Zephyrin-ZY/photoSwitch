@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     data_dir: str = "/data"  # Docker volume mount for project data
     clip_model: str = "/app/models/clip-vit-base-patch32"
     similarity_threshold: float = 0.85
+    # 宿主机局域网 IP / 主机名：容器部署时后端看不到宿主机网卡，需要显式指定
+    lan_ip: str | None = None
     thumbnail_size: tuple[int, int] = (600, 600)
     medium_thumbnail_size: tuple[int, int] = (1200, 1200)
     supported_formats: set[str] = {

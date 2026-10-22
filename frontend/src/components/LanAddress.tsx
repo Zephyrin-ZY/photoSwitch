@@ -12,11 +12,18 @@ import { useIsTouch } from '../utils/touch'
 export default function LanAddress() {
   const isTouch = useIsTouch()
   const [url, setUrl] = useState<string | null>(null)
+  const [unavailable, setUnavailable] = useState(false)
   const [copied, setCopied] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   const applyInfo = useCallback((info: ServerInfo) => {
-    if (!info.lan_ip) return
+    if (!info.lan_ip) {
+      // 容器内探测不到宿主机网卡，显式提示而不是静默消失
+      setUrl(null)
+      setUnavailable(Boolean(info.in_container))
+      return
+    }
+    setUnavailable(false)
     const port =
       window.location.port || (window.location.protocol === 'https:' ? '443' : '80')
     setUrl(`${window.location.protocol}//${info.lan_ip}:${port}`)
@@ -48,10 +55,11 @@ export default function LanAddress() {
     }
   }
 
-  // 触屏设备已经连上了，不需要显示；探测失败则不打扰
-  if (isTouch || !url) return null
+  // 触屏设备已经连上了，不需要显示；探测失败且非容器环境则不打扰
+  if (isTouch || (!url && !unavailable)) return null
 
   const copy = async () => {
+    if (!url) return
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)
@@ -61,24 +69,38 @@ export default function LanAddress() {
     }
   }
 
-  const display = url.replace(/^https?:\/\//, '')
+  const display = (url ?? '').replace(/^https?:\/\//, '')
+
+  const wifiIcon = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+      <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+      <line x1="12" y1="20" x2="12.01" y2="20" />
+    </svg>
+  )
 
   return (
     <div className="flex items-stretch rounded-md border border-white/10 overflow-hidden">
-      <button
-        onClick={copy}
-        title={`平板/手机在同一 WiFi 下访问：${url}（点击复制）`}
-        className="flex items-center gap-1.5 px-2.5 py-1 text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors cursor-pointer"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-          <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-          <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-          <line x1="12" y1="20" x2="12.01" y2="20" />
-        </svg>
-        <span className="text-xs font-mono">{display}</span>
-        <span className="text-[10px] text-white/30">{copied ? '已复制' : '复制'}</span>
-      </button>
+      {url ? (
+        <button
+          onClick={copy}
+          title={`平板/手机在同一 WiFi 下访问：${url}（点击复制）`}
+          className="flex items-center gap-1.5 px-2.5 py-1 text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors cursor-pointer"
+        >
+          {wifiIcon}
+          <span className="text-xs font-mono">{display}</span>
+          <span className="text-[10px] text-white/30">{copied ? '已复制' : '复制'}</span>
+        </button>
+      ) : (
+        <span
+          title="后端运行在容器内，探测不到宿主机网卡。请在宿主机执行：PHOTOSWITCH_LAN_IP=$(ipconfig getifaddr en0) docker compose up -d"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono text-amber-300/70"
+        >
+          {wifiIcon}
+          局域网地址未知
+        </span>
+      )}
       <span className="w-px bg-white/10" aria-hidden />
       <button
         onClick={refresh}

@@ -10,6 +10,9 @@ services:
       - ./backend/models/clip-vit-base-patch32:/app/models/clip-vit-base-patch32:ro
     environment:
       - PHOTOSWITCH_DATA_DIR=/data
+      # 容器看不到宿主机网卡，局域网地址需由宿主机注入：
+      #   PHOTOSWITCH_LAN_IP=$(./scripts/lan-ip.sh) docker compose up -d
+      - PHOTOSWITCH_LAN_IP=${PHOTOSWITCH_LAN_IP:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

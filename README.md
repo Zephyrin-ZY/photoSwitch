@@ -285,10 +285,10 @@ vocab.json   merges.txt  special_tokens_map.json  pytorch_model.bin
 
 ```bash
 # 生产：后端 7001 + Nginx 托管前端 7003
-docker compose up -d --build
+PHOTOSWITCH_LAN_IP=$(./scripts/lan-ip.sh) docker compose up -d --build
 
 # 开发：代码热重载
-docker compose -f docker-compose.dev.yml up -d --build
+PHOTOSWITCH_LAN_IP=$(./scripts/lan-ip.sh) docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 注意事项：
@@ -302,7 +302,9 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 - **照片目录也要挂载**，容器里才能读到你的照片。默认 compose 文件已把 `/Volumes` 与 `/Users` 以只读方式挂进去，其他系统请按需调整。
 - 容器内数据目录是 `PHOTOSWITCH_DATA_DIR=/data`，由命名卷 `photoswitch-data` 持久化。
-- 前端容器用 Nginx 把 `/api/` 反代到 `host.docker.internal:7001`（见 `frontend/nginx.conf`）。
+- 前端容器用 Nginx 把 `/api/` 反代到 `host.docker.internal:7001`，并透传 `X-Forwarded-Host`（见 `frontend/nginx.conf`）。
+- **局域网地址需要显式注入**。首页标题栏的「平板访问地址」取值优先级为：请求头里的实际访问地址 → `PHOTOSWITCH_LAN_IP` → 本机探测；而容器（macOS 上还是 Docker 虚拟机）内探测到的只是容器网桥地址，所以要用 `./scripts/lan-ip.sh` 在宿主机算好再传进去。忘了传，首页会显示「局域网地址未知」而不是一个连不通的地址。
+  换 WiFi 后 IP 变了，重新执行一次上面的启动命令即可（`make dev` 直接跑在宿主机，不用管）。
 - 访问地址：http://localhost:7003 ，局域网设备用 `http://<宿主机IP>:7003`。
 
 停止：`docker compose down`（加 `-v` 会同时删除数据卷，慎用）。
@@ -388,7 +390,7 @@ Pillow 默认不解码 HEIC，可选安装：`backend/.venv/bin/pip install pill
 
 **想用 iPad / 手机访问**
 
-前端监听 `0.0.0.0`，同一局域网内访问 `http://<Mac的IP>:7003` 即可（`make dev` 启动后，`.logs/frontend.log` 里会打印 Network 地址）。
+前端监听 `0.0.0.0`，同一局域网内访问 `http://<Mac的IP>:7003` 即可（`make dev` 启动后，`.logs/frontend.log` 里会打印 Network 地址；首页标题栏也会显示可直接复制的局域网地址）。Docker 部署时该地址需由 `PHOTOSWITCH_LAN_IP` 提供，详见 [Docker 部署](#docker-部署)。
 
 **代码改了要重启吗**
 

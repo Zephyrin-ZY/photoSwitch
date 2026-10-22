@@ -12,6 +12,10 @@ export async function listProjects(): Promise<Project[]> {
 
 export interface ServerInfo {
   lan_ip: string | null
+  /** lan_ip 的来源：转发头 / PHOTOSWITCH_LAN_IP 配置 / 本地探测 */
+  lan_ip_source?: 'forwarded' | 'config' | 'detected' | null
+  /** 后端是否运行在容器内（容器内探测不到宿主机网卡） */
+  in_container?: boolean
   hostname: string
   candidates: string[]
 }
