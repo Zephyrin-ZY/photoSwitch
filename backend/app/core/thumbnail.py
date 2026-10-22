@@ -2,9 +2,7 @@ from __future__ import annotations
 import io
 from pathlib import Path
 from PIL import Image, ImageOps
-from ..config import settings
-
-RAW_FORMATS = {"cr2", "nef", "arw", "raf", "dng", "orf", "rw2"}
+from ..config import RAW_FORMATS, settings
 
 
 def get_project_thumbnail_dir(project_id: str) -> Path:

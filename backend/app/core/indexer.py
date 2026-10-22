@@ -3,7 +3,7 @@ import json
 import uuid
 import threading
 from pathlib import Path
-from ..config import settings
+from ..config import RAW_FORMATS, settings
 from ..models.project import Project, ProjectStatus
 from ..models.photo import PhotoFile, PhotoStatus
 
@@ -82,6 +82,9 @@ def load_files(project_id: str) -> list[PhotoFile]:
     data = json.loads((project_dir / "files.json").read_text())
     files = []
     for f in data["files"]:
+        # 旧数据里 RAW 是独立照片，现在只作为 JPG 的附件存在，加载时直接忽略
+        if f.get("format", "").lower() in RAW_FORMATS:
+            continue
         # 兼容旧数据：status='favorite' 迁移到 is_favorite=True + status='keep'
         if f.get("status") == "favorite":
             f["status"] = "keep"

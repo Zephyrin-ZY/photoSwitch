@@ -8,7 +8,7 @@ from ..core.indexer import (
     load_files, save_files, update_photo_status, get_project_dir,
     list_projects, delete_project, save_progress, load_progress,
 )
-from ..core.scanner import list_supported_files, scan_folder
+from ..core.scanner import count_base_files, list_supported_files, scan_folder
 from ..core.thumbnail import generate_thumbnail
 from ..models.project import ProjectStatus
 from concurrent.futures import ThreadPoolExecutor
@@ -76,7 +76,7 @@ def api_scan_project(project_id: str):
             except Exception:
                 continue
 
-        total_candidates = sum(len(files) for _, files in candidate_lists)
+        total_candidates = sum(count_base_files(files) for _, files in candidate_lists)
         _scan_progress[project_id] = {
             "done": False,
             "current": 0,

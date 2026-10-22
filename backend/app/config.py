@@ -8,6 +8,9 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 # 本地开发配置文件，Docker 环境下该文件通常不存在，pydantic-settings 会自动忽略
 ENV_FILE = BACKEND_DIR / ".env"
 
+# RAW 仅作为 JPG 的附件参与导出，不进入缩略图 / CLIP / 筛选流程
+RAW_FORMATS = {"cr2", "nef", "arw", "raf", "dng", "orf", "rw2"}
+
 
 class Settings(BaseSettings):
     app_name: str = "PhotoSwitch"

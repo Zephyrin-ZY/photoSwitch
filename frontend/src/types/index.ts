@@ -12,6 +12,10 @@ export interface Photo {
   width: number | null
   height: number | null
   orientation: number | null
+  raw_path: string | null
+  raw_filename: string | null
+  raw_format: string | null
+  raw_size: number | null
 }
 
 export interface Project {

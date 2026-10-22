@@ -119,12 +119,16 @@ export async function exportPhotos(
   projectId: string,
   destFolder: string,
   onlyFavorites: boolean = false,
-  correctOrientation: boolean = false
+  correctOrientation: boolean = false,
+  exportJpg: boolean = true,
+  exportRaw: boolean = false
 ): Promise<void> {
   await api.post(`/projects/${projectId}/export`, {
     dest_folder: destFolder,
     only_favorites: onlyFavorites,
     correct_orientation: correctOrientation,
+    export_jpg: exportJpg,
+    export_raw: exportRaw,
   })
 }
 

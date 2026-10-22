@@ -25,3 +25,7 @@ class PhotoFile(BaseModel):
     width: int | None = None
     height: int | None = None
     orientation: int | None = None
+    raw_path: str | None = None
+    raw_filename: str | None = None
+    raw_format: str | None = None
+    raw_size: int | None = None

@@ -12,13 +12,19 @@ interface Props {
 interface ExportProgress {
   done: boolean
   exported?: number
+  exported_files?: number
+  missing_raw?: number
+  skipped?: number
   errors?: number
   current?: number
   total?: number
+  error?: string
 }
 
 export default function ExportPanel({ projectId, keptCount, favoriteCount, onClose }: Props) {
   const [destFolder, setDestFolder] = useState('')
+  const [exportJpg, setExportJpg] = useState(true)
+  const [exportRaw, setExportRaw] = useState(false)
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const [correctOrientation, setCorrectOrientation] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
@@ -29,6 +35,9 @@ export default function ExportPanel({ projectId, keptCount, favoriteCount, onClo
   const [error, setError] = useState('')
 
   const estimatedCount = onlyFavorites ? favoriteCount : keptCount
+  const formatLabel = exportJpg && exportRaw ? 'JPG + RAW' : exportJpg ? '仅 JPG' : '仅 RAW'
+  const missingRawOnlySkips = !exportJpg && exportRaw ? progress?.missing_raw ?? 0 : 0
+  const otherSkips = Math.max(0, (progress?.skipped ?? 0) - missingRawOnlySkips)
 
   const handleBrowse = async (path: string = '') => {
     try {
@@ -54,7 +63,7 @@ export default function ExportPanel({ projectId, keptCount, favoriteCount, onClo
     setExporting(true)
     setError('')
     try {
-      await exportPhotos(projectId, destFolder, onlyFavorites, correctOrientation)
+      await exportPhotos(projectId, destFolder, onlyFavorites, correctOrientation, exportJpg, exportRaw)
       // Poll progress
       const poll = setInterval(async () => {
         try {
@@ -100,12 +109,31 @@ export default function ExportPanel({ projectId, keptCount, favoriteCount, onClo
 
           {progress?.done ? (
             <div className="text-center py-6 space-y-3">
-              <div className="text-2xl">✓</div>
-              <div className="text-green-400 text-sm">导出完成</div>
-              <div className="text-white/40 text-xs">
-                成功导出 {progress.exported} 张照片
-                {progress.errors ? `，${progress.errors} 张失败` : ''}
+              <div className="text-2xl">{progress.error ? '!' : '✓'}</div>
+              <div className={`text-sm ${progress.error ? 'text-red-400' : progress.exported ? 'text-green-400' : 'text-yellow-400'}`}>
+                {progress.error ? '导出失败' : progress.exported ? '导出完成' : '没有可导出的文件'}
               </div>
+              {progress.error ? (
+                <div className="text-red-400/70 text-xs break-all">{progress.error}</div>
+              ) : (
+                <div className="text-white/40 text-xs space-y-1">
+                  <div>
+                    {progress.exported ? `成功导出 ${progress.exported} 张照片` : '所选照片均没有目标格式'}
+                    {progress.exported_files && progress.exported_files !== progress.exported
+                      ? `（共 ${progress.exported_files} 个文件）`
+                      : ''}
+                  </div>
+                  {progress.missing_raw ? (
+                    <div className="text-yellow-400/60">
+                      {exportJpg
+                        ? `${progress.missing_raw} 张没有 RAW，仅导出了 JPG`
+                        : `${progress.missing_raw} 张没有 RAW，已跳过`}
+                    </div>
+                  ) : null}
+                  {otherSkips > 0 ? <div>另外跳过 {otherSkips} 张</div> : null}
+                  {progress.errors ? <div className="text-red-400/70">{progress.errors} 个文件失败</div> : null}
+                </div>
+              )}
               <button
                 onClick={onClose}
                 className="mt-4 px-6 py-2 rounded-lg bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 cursor-pointer"
@@ -119,6 +147,7 @@ export default function ExportPanel({ projectId, keptCount, favoriteCount, onClo
               <div className="rounded-lg bg-white/5 border border-white/10 px-4 py-3">
                 <div className="text-sm text-white/60">
                   将导出 <span className="text-cyan-400 font-medium">{estimatedCount}</span> 张照片
+                  <span className="text-white/35">（{formatLabel}）</span>
                 </div>
                 <div className="text-xs text-white/30 mt-1">
                   {onlyFavorites
@@ -149,6 +178,34 @@ export default function ExportPanel({ projectId, keptCount, favoriteCount, onClo
                 </button>
               </div>
 
+              {/* 导出格式 */}
+              <div>
+                <label className="block text-sm text-white/60 mb-2">导出格式</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <FormatOption
+                    label="JPG"
+                    description="筛选用的普通图片"
+                    checked={exportJpg}
+                    locked={exportJpg && !exportRaw}
+                    onToggle={() => setExportJpg(v => !v)}
+                  />
+                  <FormatOption
+                    label="RAW"
+                    description="相机原始文件"
+                    checked={exportRaw}
+                    locked={exportRaw && !exportJpg}
+                    onToggle={() => setExportRaw(v => !v)}
+                  />
+                </div>
+                <div className="text-[11px] text-white/30 mt-2">
+                  {exportJpg && exportRaw
+                    ? '两种格式都会导出；缺少 RAW 的照片只导出 JPG'
+                    : exportJpg
+                      ? '只导出筛选用的普通图片'
+                      : '只导出 RAW；没有 RAW 的照片会被跳过'}
+                </div>
+              </div>
+
               {/* 导出选项 */}
               <div className="space-y-3">
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -172,7 +229,7 @@ export default function ExportPanel({ projectId, keptCount, favoriteCount, onClo
                   />
                   <div>
                     <span className="text-white/70 text-sm">修正照片方向</span>
-                    <div className="text-white/30 text-xs">根据 EXIF 信息旋转，输出为 JPEG</div>
+                    <div className="text-white/30 text-xs">根据 EXIF 信息旋转普通图片并输出为 JPEG，RAW 原样复制</div>
                   </div>
                 </label>
               </div>
@@ -207,7 +264,7 @@ export default function ExportPanel({ projectId, keptCount, favoriteCount, onClo
                 </button>
                 <button
                   onClick={handleExport}
-                  disabled={exporting || !destFolder}
+                  disabled={exporting || !destFolder || (!exportJpg && !exportRaw)}
                   className="flex-1 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-medium disabled:opacity-50 cursor-pointer"
                 >
                   {exporting ? '导出中...' : '开始导出'}
@@ -234,6 +291,34 @@ export default function ExportPanel({ projectId, keptCount, favoriteCount, onClo
         )}
       </AnimatePresence>
     </>
+  )
+}
+
+function FormatOption({ label, description, checked, locked, onToggle }: {
+  label: string
+  description: string
+  checked: boolean
+  locked: boolean
+  onToggle: () => void
+}) {
+  return (
+    <label
+      className={`flex flex-col gap-1 px-3 py-2.5 rounded-lg border transition-colors ${
+        checked ? 'border-cyan-500/40 bg-cyan-500/10' : 'border-white/10 bg-white/5'
+      } ${locked ? 'cursor-default' : 'cursor-pointer hover:border-white/20'}`}
+    >
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={locked}
+          onChange={onToggle}
+          className="w-4 h-4 rounded border-white/20 bg-white/5 text-cyan-500"
+        />
+        <span className={`text-sm ${checked ? 'text-cyan-300' : 'text-white/50'}`}>{label}</span>
+      </div>
+      <span className="text-[11px] text-white/30 pl-6">{description}</span>
+    </label>
   )
 }
 
