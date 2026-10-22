@@ -45,6 +45,7 @@ export default function PhotoViewer({ photo, projectId, photos, currentIndex, on
   const [loadedHash, setLoadedHash] = useState<string | null>(null)
   const [loadedAspect, setLoadedAspect] = useState<{ hash: string; aspect: number } | null>(null)
   const [ratio, setRatio] = useState<RatioKey>('original')
+  const [showGrid, setShowGrid] = useState(false)
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
 
   const ratioAspect = getRatioAspect(ratio)
@@ -261,6 +262,14 @@ export default function PhotoViewer({ photo, projectId, photos, currentIndex, on
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0 border-l border-white/10 pl-2">
+          <ToolbarButton
+            label={showGrid ? '隐藏九宫格辅助线' : '显示九宫格辅助线'}
+            onClick={() => setShowGrid(v => !v)}
+            active={showGrid}
+          >
+            <GridIcon />
+          </ToolbarButton>
+          <span className="w-px h-5 bg-white/10 mx-0.5" aria-hidden />
           <ToolbarButton label="缩小" onClick={zoomOut} disabled={scale <= 1.001}>−</ToolbarButton>
           <span className="w-10 text-center text-[11px] tabular-nums text-white/50 select-none">{Math.round(scale * 100)}%</span>
           <ToolbarButton label="放大" onClick={zoomIn} disabled={scale >= 4.999}>+</ToolbarButton>
@@ -344,9 +353,20 @@ export default function PhotoViewer({ photo, projectId, photos, currentIndex, on
                 )}
               </div>
               <div className="pointer-events-none absolute inset-0 border border-white/20" />
+              {showGrid && <RuleOfThirdsGrid />}
             </div>
           </>
         ) : null}
+
+        {ratio === 'original' && showGrid && containSize && (
+          <div
+            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            style={{ width: containSize.width, height: containSize.height }}
+            aria-hidden
+          >
+            <RuleOfThirdsGrid />
+          </div>
+        )}
 
         {ratio !== 'original' && (
           <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
@@ -407,10 +427,11 @@ export default function PhotoViewer({ photo, projectId, photos, currentIndex, on
   )
 }
 
-function ToolbarButton({ label, onClick, disabled, children }: {
+function ToolbarButton({ label, onClick, disabled, active, children }: {
   label: string
   onClick: () => void
   disabled?: boolean
+  active?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -419,11 +440,36 @@ function ToolbarButton({ label, onClick, disabled, children }: {
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
+      aria-pressed={active}
       title={label}
-      className="h-8 w-8 flex items-center justify-center rounded-md border border-white/10 text-white/55 text-sm cursor-pointer hover:text-white/80 active:bg-white/10 disabled:opacity-20 disabled:cursor-default select-none"
+      className={`h-8 w-8 flex items-center justify-center rounded-md border text-sm cursor-pointer active:bg-white/10 disabled:opacity-20 disabled:cursor-default select-none ${
+        active
+          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+          : 'border-white/10 text-white/55 hover:text-white/80'
+      }`}
     >
       {children}
     </button>
+  )
+}
+
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.1" aria-hidden>
+      <rect x="1.25" y="1.25" width="13.5" height="13.5" rx="1.5" opacity="0.6" />
+      <path d="M5.75 1.25v13.5M10.25 1.25v13.5M1.25 5.75h13.5M1.25 10.25h13.5" />
+    </svg>
+  )
+}
+
+function RuleOfThirdsGrid() {
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden>
+      <span className="absolute inset-y-0 left-1/3 w-px bg-white/45 shadow-[0_0_3px_rgba(0,0,0,0.5)]" />
+      <span className="absolute inset-y-0 left-2/3 w-px bg-white/45 shadow-[0_0_3px_rgba(0,0,0,0.5)]" />
+      <span className="absolute inset-x-0 top-1/3 h-px bg-white/45 shadow-[0_0_3px_rgba(0,0,0,0.5)]" />
+      <span className="absolute inset-x-0 top-2/3 h-px bg-white/45 shadow-[0_0_3px_rgba(0,0,0,0.5)]" />
+    </div>
   )
 }
 
