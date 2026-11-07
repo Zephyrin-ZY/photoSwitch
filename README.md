@@ -39,6 +39,7 @@
 | 两两对决 | 组内照片逐张 PK，胜者留下、败者淘汰，比逐张打分快得多 |
 | 状态管理 | 待筛选 / 保留 / 淘汰 / 收藏，支持撤销，筛选进度落盘可中断续做 |
 | 导出 | 把保留或收藏的照片复制到目标文件夹，导出格式可选 JPG、RAW 或两者；可只导收藏、可按 EXIF 方向纠正 |
+| 下载 | 浏览器直接下载磁盘原文件（非缩略图），单张可选 JPG/RAW；保留页支持多选后逐张批量下载 |
 
 支持的图片格式：`jpg / jpeg / png / tiff / tif / webp / heic / cr2 / nef / arw / raf / dng / orf / rw2`
 
@@ -275,7 +276,7 @@ vocab.json   merges.txt  special_tokens_map.json  pytorch_model.bin
    - 两两对决：组内照片逐张 PK，胜者留下
    - 状态切换：保留 / 淘汰 / 收藏，可随时撤销
    - 顶部标签按 全部 / 待筛选 / 保留 / 淘汰 / 收藏 过滤
-5. **导出**：选择目标文件夹和导出格式（JPG / RAW / 两者都导），可只导出收藏、可选择按 EXIF 方向纠正后导出。缺少 RAW 的照片会自动降级为只导 JPG。
+5. **导出**：选择导出格式（JPG / RAW / 两者都导），可只导出收藏、可选择按 EXIF 方向纠正后导出。缺少 RAW 的照片会自动降级为只导 JPG。照片统一保存到专用导出目录下以项目名命名的子文件夹，重复导出时同名文件直接覆盖。Docker 部署默认是项目下的 `exports/`（容器内 `/exports`），直接运行后端时默认是 `~/PhotoSwitch-Export`。
 
 分析结果与筛选进度都会落盘，中途关掉浏览器或重启服务都能接着做。
 
@@ -303,6 +304,7 @@ PHOTOSWITCH_LAN_IP=$(./scripts/lan-ip.sh) docker compose -f docker-compose.dev.y
   ```
 
 - **照片目录也要挂载**，容器里才能读到你的照片。默认 compose 文件已把 `/Volumes` 与 `/Users` 以只读方式挂进去，其他系统请按需调整。
+- **导出目录是唯一可写位置**。默认把项目下的 `./exports` 挂到容器 `/exports`，导出会自动保存到 `<导出目录>/<项目名>/`。想换位置就在启动时覆盖宿主机路径，例如 `PHOTOSWITCH_EXPORT_HOST_DIR=~/Pictures/PhotoSwitch-Export docker compose up -d`；也可以把它写进项目根目录的 `.env`（该文件不提交），之后直接 `docker compose up -d` 即可。源照片目录保持只读，避免误删原片。
 - 容器内数据目录是 `PHOTOSWITCH_DATA_DIR=/data`，由命名卷 `photoswitch-data` 持久化。
 - 前端容器用 Nginx 把 `/api/` 反代到 `host.docker.internal:7001`，并透传 `X-Forwarded-Host`（见 `frontend/nginx.conf`）。
 - **局域网地址需要显式注入**。首页标题栏的「平板访问地址」取值优先级为：请求头里的实际访问地址 → `PHOTOSWITCH_LAN_IP` → 本机探测；而容器（macOS 上还是 Docker 虚拟机）内探测到的只是容器网桥地址，所以要用 `./scripts/lan-ip.sh` 在宿主机算好再传进去。忘了传，首页会显示「局域网地址未知」而不是一个连不通的地址。

@@ -48,3 +48,9 @@ backend/models/
 
 # 保留 .env 模板，只忽略真实配置
 !.env.example
+
+# 本地数据备份，不上传仓库
+backups/
+
+# 默认导出目录
+exports/

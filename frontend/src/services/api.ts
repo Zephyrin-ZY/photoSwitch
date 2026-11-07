@@ -117,19 +117,68 @@ export async function getAnalysisProgress(projectId: string): Promise<{
 
 export async function exportPhotos(
   projectId: string,
-  destFolder: string,
   onlyFavorites: boolean = false,
   correctOrientation: boolean = false,
   exportJpg: boolean = true,
   exportRaw: boolean = false
 ): Promise<void> {
   await api.post(`/projects/${projectId}/export`, {
-    dest_folder: destFolder,
     only_favorites: onlyFavorites,
     correct_orientation: correctOrientation,
     export_jpg: exportJpg,
     export_raw: exportRaw,
   })
+}
+
+export interface DecisionSample {
+  hash?: string
+  filename: string
+  size?: number | null
+  status?: string
+}
+
+export interface DecisionConflict {
+  reason: 'manifest_conflict' | 'ambiguous'
+  hash: string
+  filename: string
+  status: string | null
+  detail: string
+  candidates: { hash: string; filename: string; rel_path?: string }[]
+}
+
+export interface DecisionImportReport {
+  mode: 'fill_pending' | 'overwrite'
+  dry_run: boolean
+  manifest_total: number
+  matched: number
+  applied: number
+  kept_existing: number
+  overwritten: number
+  favorites_restored: number
+  by_strategy: Record<string, number>
+  missing_count: number
+  missing_samples: DecisionSample[]
+  new_photos_count: number
+  new_photos_samples: DecisionSample[]
+  conflict_count: number
+  conflicts: DecisionConflict[]
+}
+
+export async function importDecisions(
+  projectId: string,
+  file: File,
+  options: { mode: 'fill_pending' | 'overwrite'; dryRun: boolean; restoreFavorites: boolean }
+): Promise<DecisionImportReport> {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.post(`/projects/${projectId}/decisions/import`, form, {
+    params: {
+      mode: options.mode,
+      dry_run: options.dryRun,
+      restore_favorites: options.restoreFavorites,
+    },
+  })
+  return data
 }
 
 export function getThumbnailUrl(hash: string, projectId: string, size: 'thumb' | 'medium' = 'thumb'): string {
@@ -138,6 +187,10 @@ export function getThumbnailUrl(hash: string, projectId: string, size: 'thumb' |
 
 export function getOriginalUrl(hash: string, projectId: string): string {
   return `/api/photos/${hash}/original?project_id=${projectId}`
+}
+
+export function getDownloadUrl(hash: string, projectId: string, format: 'jpg' | 'raw'): string {
+  return `/api/photos/${hash}/download?project_id=${projectId}&format=${format}`
 }
 
 export interface DirEntry {

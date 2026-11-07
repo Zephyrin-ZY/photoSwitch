@@ -15,6 +15,8 @@ RAW_FORMATS = {"cr2", "nef", "arw", "raf", "dng", "orf", "rw2"}
 class Settings(BaseSettings):
     app_name: str = "PhotoSwitch"
     data_dir: str = "/data"  # Docker volume mount for project data
+    # 唯一允许写入的导出目录；源照片目录是只读挂载，导出必须落在该目录内
+    export_dir: str = str(Path.home() / "PhotoSwitch-Export")
     clip_model: str = "/app/models/clip-vit-base-patch32"
     similarity_threshold: float = 0.85
     # 宿主机局域网 IP / 主机名：容器部署时后端看不到宿主机网卡，需要显式指定

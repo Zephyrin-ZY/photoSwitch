@@ -1,9 +1,26 @@
 from __future__ import annotations
+import re
 import shutil
 from pathlib import Path
+from ..config import settings
 from ..models.photo import PhotoFile, PhotoStatus
 from .scanner import find_raw_companion
 from .thumbnail import load_oriented_image
+
+_INVALID_FOLDER_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+
+
+def export_root() -> Path:
+    root = Path(settings.export_dir).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def export_dir_for_project(project_name: str) -> Path:
+    safe_name = _INVALID_FOLDER_CHARS.sub("_", project_name).strip().strip(".")
+    dest = export_root() / (safe_name or "project")
+    dest.mkdir(parents=True, exist_ok=True)
+    return dest
 
 
 def export_photos(
@@ -33,6 +50,8 @@ def export_photos(
     exported_files = 0
     missing_raw = 0
     skipped = 0
+    # 已存在的同名文件直接覆盖；同一批次内重名才加序号，避免互相覆盖丢图
+    used_names: set[str] = set()
 
     for index, f in enumerate(selected, start=1):
         src = Path(f.original_path)
@@ -41,7 +60,7 @@ def export_photos(
 
         if export_jpg:
             if src.is_file():
-                target = _export_primary(src, f.format, dest, correct_orientation)
+                target = _export_primary(src, f.format, dest, correct_orientation, used_names)
                 if target is not None:
                     formats.append("jpg")
                     paths.append(str(target))
@@ -55,8 +74,8 @@ def export_photos(
             if raw_src is None:
                 missing_raw += 1
             else:
+                raw_target = _target_path(dest, raw_src.name, used_names)
                 try:
-                    raw_target = _unique_export_path(dest / raw_src.name)
                     shutil.copy2(str(raw_src), str(raw_target))
                     formats.append("raw")
                     paths.append(str(raw_target))
@@ -88,31 +107,44 @@ def export_photos(
     }
 
 
-def _export_primary(src: Path, fmt: str, dest: Path, correct_orientation: bool) -> Path | None:
+def _export_primary(
+    src: Path,
+    fmt: str,
+    dest: Path,
+    correct_orientation: bool,
+    used_names: set[str],
+) -> Path | None:
     if correct_orientation:
-        target = _unique_export_path(dest / f"{src.stem}.jpg")
+        target = _target_path(dest, f"{src.stem}.jpg", used_names)
         if _export_corrected_image(str(src), fmt, target):
             return target
+        used_names.discard(target.name.casefold())
 
-    target = _unique_export_path(dest / src.name)
+    target = _target_path(dest, src.name, used_names)
     try:
         shutil.copy2(str(src), str(target))
+    except shutil.SameFileError:
+        pass
     except OSError:
         return None
     return target
 
 
-def _unique_export_path(target_path: Path) -> Path:
-    if not target_path.exists():
-        return target_path
+def _target_path(dest: Path, filename: str, used_names: set[str]) -> Path:
+    key = filename.casefold()
+    if key not in used_names:
+        used_names.add(key)
+        return dest / filename
 
-    stem = target_path.stem
-    suffix = target_path.suffix
+    stem = Path(filename).stem
+    suffix = Path(filename).suffix
     i = 1
     while True:
-        candidate = target_path.with_name(f"{stem}_{i}{suffix}")
-        if not candidate.exists():
-            return candidate
+        candidate = f"{stem}_{i}{suffix}"
+        key = candidate.casefold()
+        if key not in used_names:
+            used_names.add(key)
+            return dest / candidate
         i += 1
 
 

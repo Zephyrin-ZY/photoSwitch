@@ -7,9 +7,12 @@ services:
       - photoswitch-data:/data
       - /Volumes:/volumes:ro
       - /Users:/Users:ro
+      # 导出唯一可写目录；宿主机路径可用 PHOTOSWITCH_EXPORT_HOST_DIR 覆盖
+      - ${PHOTOSWITCH_EXPORT_HOST_DIR:-./exports}:/exports
       - ./backend/models/clip-vit-base-patch32:/app/models/clip-vit-base-patch32:ro
     environment:
       - PHOTOSWITCH_DATA_DIR=/data
+      - PHOTOSWITCH_EXPORT_DIR=/exports
       # 容器看不到宿主机网卡，局域网地址需由宿主机注入：
       #   PHOTOSWITCH_LAN_IP=$(./scripts/lan-ip.sh) docker compose up -d
       - PHOTOSWITCH_LAN_IP=${PHOTOSWITCH_LAN_IP:-}

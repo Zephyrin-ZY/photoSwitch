@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from ..core.indexer import (
     create_project, load_project, save_project,
     load_files, save_files, update_photo_status, get_project_dir,
-    list_projects, delete_project, save_progress, load_progress,
+    list_projects, delete_project, save_progress, load_progress, get_file_lock,
 )
 from ..core.scanner import count_base_files, list_supported_files, scan_folder
 from ..core.thumbnail import generate_thumbnail
@@ -109,7 +109,18 @@ def api_scan_project(project_id: str):
                 processed_candidates += len(files)
                 continue
 
-        save_files(project_id, all_photos)
+        # 重扫会重建文件列表：按内容哈希继承已有筛选决策，避免调整目录后选择被清空
+        with get_file_lock(project_id):
+            try:
+                previous = {f.hash: f for f in load_files(project_id)}
+            except Exception:
+                previous = {}
+            for photo in all_photos:
+                old = previous.get(photo.hash)
+                if old is not None:
+                    photo.status = old.status
+                    photo.is_favorite = old.is_favorite
+            save_files(project_id, all_photos)
         project.total_files = len(all_photos)
         project.status = ProjectStatus.ANALYZING
         save_project(project)

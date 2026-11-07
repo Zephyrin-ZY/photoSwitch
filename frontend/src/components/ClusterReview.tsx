@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getOriginalUrl, getThumbnailUrl } from '../services/api'
 import { usePhotoGestures } from '../hooks/usePhotoGestures'
+import { useIsTouch } from '../utils/touch'
+import { resolveDisplayAspect } from '../utils/aspect'
+import ClusterModeToggle from './ClusterModeToggle'
 import type { Photo } from '../types'
 
 interface Props {
@@ -11,6 +14,8 @@ interface Props {
   onClose: () => void
   /** 确认保留后：跳到下一个未筛选的组，或回到网格 */
   onComplete: () => void
+  /** 切到两两 PK（已淘汰的照片不会复活） */
+  onSwitchMode: () => void
   onStatusChange: (hash: string, status: string) => Promise<void>
   onToggleFavorite: (hash: string, isFavorite: boolean) => Promise<void>
 }
@@ -21,12 +26,14 @@ interface HistoryEntry {
 }
 
 /**
- * 相似组内淘汰浏览（移动端 PK 替代方案）。
+ * 相似组内逐张浏览淘汰。
  *
  * 交互：全屏逐张浏览，横滑切换、捏合/双击缩放；点 ✕ 淘汰当前张（自动下一张）；
  * 浏览完点「确认保留」，把组内所有未被淘汰的照片一次性标记为保留。
+ * 顶栏可切到两两 PK，两者共用同一份筛选结果。
  */
-export default function ClusterReview({ photos, projectId, onClose, onComplete, onStatusChange, onToggleFavorite }: Props) {
+export default function ClusterReview({ photos, projectId, onClose, onComplete, onSwitchMode, onStatusChange, onToggleFavorite }: Props) {
+  const isTouch = useIsTouch()
   // 快照到本地状态：淘汰只改本地 + 逐张写回后端，列表顺序保持稳定
   const [items, setItems] = useState<Photo[]>(() => photos.map(p => ({ ...p })))
   const [index, setIndex] = useState(0)
@@ -40,7 +47,7 @@ export default function ClusterReview({ photos, projectId, onClose, onComplete, 
   const current = items[index]
   const currentHash = current?.hash
   const metaAspect = current && current.width && current.height ? current.width / current.height : null
-  const imgAspect = loadedAspect?.hash === currentHash ? loadedAspect.aspect : metaAspect
+  const imgAspect = resolveDisplayAspect(loadedAspect, currentHash, metaAspect)
   const displaySrc = current && loadedHash === current.hash ? 'original' : 'thumb'
 
   const goPrev = useCallback(() => setIndex(i => Math.max(0, i - 1)), [])
@@ -179,22 +186,25 @@ export default function ClusterReview({ photos, projectId, onClose, onComplete, 
       className="fixed inset-0 z-50 bg-[#0a0a0f] flex flex-col"
     >
       {/* 顶部栏 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-white/10">
         <div className="min-w-0">
           <div className="text-white/50 text-xs sm:text-sm truncate">
             相似组 · {index + 1} / {items.length}
           </div>
-          <div className="text-[11px] text-white/30 mt-0.5">
+          <div className="text-[10px] sm:text-[11px] text-white/30 mt-0.5 truncate">
             已淘汰 {eliminatedCount} · 将保留 {keepCount}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <ClusterModeToggle mode="review" onChange={onSwitchMode} />
           <button
             onClick={undo}
             disabled={history.length === 0}
-            className="h-11 px-3 text-sm text-white/50 border border-white/10 rounded-lg disabled:opacity-20 cursor-pointer active:bg-white/10"
+            aria-label="撤销上一次淘汰"
+            className="h-11 px-2.5 sm:px-3 text-sm text-white/50 border border-white/10 rounded-lg disabled:opacity-20 cursor-pointer active:bg-white/10"
           >
-            ↩ 撤销
+            <span className="text-base">↩</span>
+            {!isTouch && <span className="ml-1">撤销</span>}
           </button>
           <button
             onClick={onClose}

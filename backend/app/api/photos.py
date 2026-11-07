@@ -2,6 +2,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, Response
 from ..core.indexer import load_files
+from ..core.scanner import find_raw_companion
 from ..core.thumbnail import get_thumbnail_path, get_corrected_image_bytes
 from pathlib import Path
 
@@ -22,6 +23,31 @@ def api_get_thumbnail(file_hash: str, project_id: str, size: str = "thumb"):
     if not thumb_path.exists():
         raise HTTPException(404, "Thumbnail not found")
     return FileResponse(str(thumb_path), media_type="image/jpeg")
+
+
+@router.get("/{file_hash}/download")
+def api_download_original(file_hash: str, project_id: str, format: str = "jpg"):
+    photo = _find_file(project_id, file_hash)
+    if photo is None:
+        raise HTTPException(404, "Photo not found in project")
+
+    if format == "jpg":
+        src = Path(photo.original_path)
+        filename = photo.filename
+    elif format == "raw":
+        raw = find_raw_companion(photo)
+        if raw is None:
+            raise HTTPException(404, "RAW file not found")
+        src = raw
+        filename = photo.raw_filename or raw.name
+    else:
+        raise HTTPException(400, "format must be jpg or raw")
+
+    if not src.is_file():
+        raise HTTPException(404, "Original file not found on disk")
+
+    # 下载必须是磁盘原始字节，不做方向纠正或转码
+    return FileResponse(str(src), filename=filename)
 
 
 @router.get("/{file_hash}/original")

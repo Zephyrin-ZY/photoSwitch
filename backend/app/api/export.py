@@ -2,7 +2,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from ..core.indexer import load_project, load_files
-from ..core.exporter import export_photos
+from ..core.exporter import export_photos, export_dir_for_project
 from concurrent.futures import ThreadPoolExecutor
 
 router = APIRouter(prefix="/api/projects/{project_id}/export", tags=["export"])
@@ -12,7 +12,6 @@ _export_progress: dict[str, dict] = {}
 
 
 class ExportRequest(BaseModel):
-    dest_folder: str
     only_favorites: bool = False
     correct_orientation: bool = False
     export_jpg: bool = True
@@ -25,19 +24,24 @@ def api_export(project_id: str, req: ExportRequest):
         raise HTTPException(400, "At least one export format is required")
 
     try:
-        load_project(project_id)
+        project = load_project(project_id)
     except FileNotFoundError:
         raise HTTPException(404, "Project not found")
 
+    try:
+        dest = export_dir_for_project(project.name)
+    except OSError as exc:
+        raise HTTPException(500, f"无法创建导出目录: {exc}")
+
     files = load_files(project_id)
-    progress = {"current": 0, "total": 0, "done": False}
+    progress = {"current": 0, "total": 0, "done": False, "folder": dest.name}
     _export_progress[project_id] = progress
 
     def do_export():
         try:
             result = export_photos(
                 files,
-                req.dest_folder,
+                str(dest),
                 only_favorites=req.only_favorites,
                 correct_orientation=req.correct_orientation,
                 export_jpg=req.export_jpg,
@@ -58,6 +62,7 @@ def api_export(project_id: str, req: ExportRequest):
             "missing_raw": result["missing_raw"],
             "skipped": result["skipped"],
             "errors": result["errors"],
+            "error_details": result["error_details"][:5],
         })
 
     executor.submit(do_export)

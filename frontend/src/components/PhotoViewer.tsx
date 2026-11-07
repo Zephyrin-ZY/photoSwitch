@@ -4,6 +4,8 @@ import { getOriginalUrl, getThumbnailUrl } from '../services/api'
 import { useShortcuts } from '../stores/ShortcutStore'
 import { useIsTouch } from '../utils/touch'
 import { usePhotoGestures } from '../hooks/usePhotoGestures'
+import { downloadOriginal, hasRaw, formatBytes, type DownloadFormat } from '../utils/download'
+import { useToast } from './Toast'
 import type { Photo } from '../types'
 
 interface Props {
@@ -42,10 +44,12 @@ const FRAME_PADDING = 12
 export default function PhotoViewer({ photo, projectId, photos, currentIndex, onClose, onNavigate, onStatusChange, onToggleFavorite }: Props) {
   const { match, label } = useShortcuts()
   const isTouch = useIsTouch()
+  const { showError, showSuccess } = useToast()
   const [loadedHash, setLoadedHash] = useState<string | null>(null)
   const [loadedAspect, setLoadedAspect] = useState<{ hash: string; aspect: number } | null>(null)
   const [ratio, setRatio] = useState<RatioKey>('original')
   const [showGrid, setShowGrid] = useState(false)
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false)
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
 
   const ratioAspect = getRatioAspect(ratio)
@@ -107,6 +111,21 @@ export default function PhotoViewer({ photo, projectId, photos, currentIndex, on
     if (currentIndex < photos.length - 1) onNavigate(currentIndex + 1)
     else onClose()
   }, [currentIndex, photos.length, onNavigate, onClose])
+
+  useEffect(() => {
+    setShowDownloadMenu(false)
+  }, [photo.hash])
+
+  const handleDownload = async (format: DownloadFormat) => {
+    setShowDownloadMenu(false)
+    try {
+      await downloadOriginal(projectId, photo, format)
+      showSuccess(`已开始下载${format === 'raw' ? 'RAW' : 'JPG'}原图`)
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return
+      showError(err instanceof Error ? err.message : '下载失败')
+    }
+  }
 
   const doKeep = useCallback(() => {
     onStatusChange(photo.hash, 'keep')
@@ -273,6 +292,44 @@ export default function PhotoViewer({ photo, projectId, photos, currentIndex, on
           <ToolbarButton label="缩小" onClick={zoomOut} disabled={scale <= 1.001}>−</ToolbarButton>
           <span className="w-10 text-center text-[11px] tabular-nums text-white/50 select-none">{Math.round(scale * 100)}%</span>
           <ToolbarButton label="放大" onClick={zoomIn} disabled={scale >= 4.999}>+</ToolbarButton>
+          <span className="w-px h-5 bg-white/10 mx-0.5" aria-hidden />
+          <div className="relative">
+            <ToolbarButton
+              label="下载原图"
+              onClick={() => setShowDownloadMenu(v => !v)}
+              active={showDownloadMenu}
+            >
+              <DownloadIcon />
+            </ToolbarButton>
+            {showDownloadMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowDownloadMenu(false)} />
+                <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-white/10 bg-[#12121f] p-1 shadow-2xl">
+                  <button
+                    type="button"
+                    onClick={() => handleDownload('jpg')}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-left text-xs text-white/70 hover:bg-white/5 cursor-pointer"
+                  >
+                    <span>下载 JPG 原图</span>
+                    <span className="text-white/30 tabular-nums shrink-0">{formatBytes(photo.file_size)}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownload('raw')}
+                    disabled={!hasRaw(photo)}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-left text-xs text-white/70 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <span>下载 RAW</span>
+                    <span className="text-white/30 tabular-nums shrink-0">
+                      {hasRaw(photo)
+                        ? `${photo.raw_format?.toUpperCase() ?? 'RAW'} · ${formatBytes(photo.raw_size ?? 0)}`
+                        : '无 RAW'}
+                    </span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <ToolbarButton label="重置缩放" onClick={resetZoom}>↺</ToolbarButton>
         </div>
       </div>
@@ -458,6 +515,15 @@ function GridIcon() {
     <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.1" aria-hidden>
       <rect x="1.25" y="1.25" width="13.5" height="13.5" rx="1.5" opacity="0.6" />
       <path d="M5.75 1.25v13.5M10.25 1.25v13.5M1.25 5.75h13.5M1.25 10.25h13.5" />
+    </svg>
+  )
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M8 2v8M4.75 7.25 8 10.5l3.25-3.25" />
+      <path d="M2.5 12.25h11" opacity="0.6" />
     </svg>
   )
 }

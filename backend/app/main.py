@@ -4,7 +4,7 @@ import socket
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from .api import projects, photos, analysis, export
+from .api import projects, photos, analysis, export, decisions
 from .config import settings
 
 app = FastAPI(title="PhotoSwitch", version="1.0.0")
@@ -21,6 +21,7 @@ app.include_router(projects.router)
 app.include_router(photos.router)
 app.include_router(analysis.router)
 app.include_router(export.router)
+app.include_router(decisions.router)
 
 
 @app.get("/api/health")

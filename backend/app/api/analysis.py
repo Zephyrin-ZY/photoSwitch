@@ -1,7 +1,7 @@
 from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from ..core.indexer import load_project, load_files, save_files, save_project, save_progress, load_progress
+from ..core.indexer import load_project, load_files, save_files, save_project, save_progress, load_progress, get_file_lock
 from ..core.thumbnail import generate_thumbnail
 from ..ai.clip_service import extract_features_and_cluster
 from ..models.project import ProjectStatus
@@ -91,7 +91,6 @@ def api_start_analysis(project_id: str, req: AnalysisRequest):
             )
 
             if vectors is None:
-                save_files(project_id, files)
                 _progress[project_id]["clip_done"] = True
                 _progress[project_id]["error"] = "CLIP feature extraction failed"
                 _progress[project_id]["done"] = True
@@ -103,7 +102,15 @@ def api_start_analysis(project_id: str, req: AnalysisRequest):
                     if getattr(v, "cluster_id", None):
                         f.cluster_id = v.cluster_id
 
-            save_files(project_id, files)
+            # 分析可能持续较长时间，期间用户可能已经筛过照片：加锁并基于磁盘最新数据回填聚类
+            with get_file_lock(project_id):
+                latest = load_files(project_id)
+                latest_by_hash = {f.hash: f for f in latest}
+                for f in files:
+                    target = latest_by_hash.get(f.hash)
+                    if target is not None and f.cluster_id:
+                        target.cluster_id = f.cluster_id
+                save_files(project_id, latest)
             _progress[project_id]["clip_done"] = True
 
             has_clusters = any(f.cluster_id for f in files)
